@@ -1,7 +1,24 @@
+import 'package:chat_app/bloc/web_socket_bloc/web_socket.dart';
+import 'package:chat_app/screens/home_screen.dart';
+import 'package:chat_app/services/auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 void main() {
   runApp(const MyApp());
+     WidgetsFlutterBinding.ensureInitialized();
+   Firebase.initializeApp(
+options: const FirebaseOptions(apiKey:"AIzaSyCEQWl3WeMeFxZ41B90t7f2B8BltKMgA-4",
+appId:"1:756164132716:web:0f806312efee4be3b9bd49",
+authDomain:
+          'chatapp-d763e.firebaseapp.com',
+messagingSenderId:"756164132716",
+projectId:"chatapp-d763e",
+storageBucket:"chatapp-d763e.appspot.com"
+));
 }
 
 class MyApp extends StatelessWidget {
@@ -10,80 +27,60 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+    return BlocProvider(
+      create: (context)=> WebSocketBloc(),
+        child: MaterialApp(
+          title: 'Flutter Demo',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+            useMaterial3: true,
+          ),
+          home: const CheckLoginStatus(),
+        )
+      
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
 
-
-  final String title;
+class CheckLoginStatus extends StatefulWidget {
+  const CheckLoginStatus({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<CheckLoginStatus> createState() => _checkLoginStatusState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _checkLoginStatusState extends State<CheckLoginStatus> {
 
-  void _incrementCounter() {
-    setState(() {
-        _counter++;
-    });
-  }
+Future <DocumentSnapshot>check()async{
+  final User? user = FirebaseAuth.instance.currentUser;
+  FirebaseFirestore instance = FirebaseFirestore.instance;
+  DocumentSnapshot userSnapshot =
+        await instance.collection('users').doc(user?.uid ?? 'no_id').get();
+  return userSnapshot;
+}
 
   @override
   Widget build(BuildContext context) {
- 
-    return Scaffold(
-      appBar: AppBar(
-      
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-       
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
+    return FutureBuilder(future: check(), builder: (context,snapshot){
+
+ if (snapshot.connectionState == ConnectionState.waiting) {
+                return Container(
+                    color: Colors.black,
+                    child: const Center(
+                        child: CircularProgressIndicator()));
+              }
+              
+    if(snapshot.hasData){
+      if(snapshot.data!.exists){
+       return  const HomeScreen(); 
+      }
+      return SignInScreen();
+    } else{
+      return SignInScreen();
+    }         
+
+    });
   }
 }
+
